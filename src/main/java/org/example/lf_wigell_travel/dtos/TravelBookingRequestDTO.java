@@ -2,16 +2,19 @@ package org.example.lf_wigell_travel.dtos;
 
 import java.time.LocalDate;
 
-public class BookingRequestDTO {
+public class TravelBookingRequestDTO {
     private Long tripId;
     private LocalDate departureDate;
     private Long numberOfWeeks;
 
-    public BookingRequestDTO(Long tripId, LocalDate departureDate, Long numberOfWeeks) {
+    public TravelBookingRequestDTO(Long tripId, LocalDate departureDate, Long numberOfWeeks) {
         this.tripId = tripId;
         this.departureDate = departureDate;
         this.numberOfWeeks = numberOfWeeks;
     }
+
+    public TravelBookingRequestDTO() {}
+
 
     public Long getTripId() {
         return tripId;
