@@ -23,6 +23,6 @@ public class TravelCombinedController {
 
     @GetMapping("/travels")
     public ResponseEntity<List<TripDTO>> getAllTrips(){
-        return tripService.getAllTrips();
+        return ResponseEntity.ok(tripService.getAllTrips());
     }
 }

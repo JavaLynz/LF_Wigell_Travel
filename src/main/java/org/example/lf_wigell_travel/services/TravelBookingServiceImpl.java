@@ -3,7 +3,6 @@ package org.example.lf_wigell_travel.services;
 import org.example.lf_wigell_travel.dtos.ConversionResponse;
 import org.example.lf_wigell_travel.dtos.TravelBookingConfirmationDTO;
 import org.example.lf_wigell_travel.dtos.TravelBookingRequestDTO;
-import org.example.lf_wigell_travel.dtos.TripDTO;
 import org.example.lf_wigell_travel.entities.TravelBooking;
 import org.example.lf_wigell_travel.entities.Trip;
 import org.example.lf_wigell_travel.exceptions.ResourceNotFoundException;
@@ -18,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -71,19 +71,11 @@ public class TravelBookingServiceImpl implements TravelBookingService {
     public TravelBookingConfirmationDTO getBookingConfirmation(Long bookingId, String message) {
 
         TravelBooking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
-           new ResourceNotFoundException("Booking","ID",bookingId)
+                new ResourceNotFoundException("Booking", "ID", bookingId)
         );
 
         Trip trip = booking.getTrip();
 
-        RestTemplate restTemplate = new RestTemplate();
-        String url = "https://api.frankfurter.app/latest?from=SEK&to=EUR";
-        ResponseEntity<ConversionResponse> response = restTemplate.getForEntity(url, ConversionResponse.class);
-
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            BigDecimal eurRate = response.getBody().getRates().get("EUR");
-
-            BigDecimal eurAmount = booking.getTotalPriceSEK().multiply(eurRate);
 
             TravelBookingConfirmationDTO dto = new TravelBookingConfirmationDTO();
             dto.setBookingId(booking.getBookingId());
@@ -95,18 +87,34 @@ public class TravelBookingServiceImpl implements TravelBookingService {
             dto.setDepartureDate(booking.getDepartureDate());
             dto.setDurationWeeks(booking.getDurationWeeks());
             dto.setTotalPriceSek(booking.getTotalPriceSEK());
-            dto.setTotalPriceEur(eurAmount);
+            dto.setTotalPriceEur(convertSekToEur(booking.getTotalPriceSEK()));
             dto.setMessage(message);
             dto.setCancelled(false);
 
             return dto;
         }
 
-        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to fetch EUR conversion rate");
-    }
+
+    public BigDecimal convertSekToEur(BigDecimal amountInSek) {
+        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://api.frankfurter.app/latest?from=SEK&to=EUR";
+        ResponseEntity<ConversionResponse> response = restTemplate.getForEntity(url, ConversionResponse.class);
+
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            BigDecimal eurRate = response.getBody().getRates().get("EUR");
+
+            return amountInSek
+                    .multiply(eurRate)
+                    .setScale(2, RoundingMode.HALF_UP);
+
+        }
+
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to fetch EUR conversion rate");
+        }
+
 
     public TravelBookingConfirmationDTO convertToDTO(TravelBooking travelBooking) {
-        return getBookingConfirmation(travelBooking.getBookingId(), null);
+        return getBookingConfirmation(travelBooking.getBookingId(), "Booking confirmed");
     }
 
     @Override
@@ -119,15 +127,13 @@ public class TravelBookingServiceImpl implements TravelBookingService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No active travel bookings found");
         }
 
-        LOGGER.info("User {} bookings found.", loggedInUsername);
-        return ResponseEntity.ok(bookings
-                .stream()
-                .map(this::convertToDTO)
-                .toList());
+        return okTravelBookingList(bookings);
     }
 
     @Override
     public ResponseEntity<TravelBookingConfirmationDTO> cancelTravelBooking(Long id) {
+        String loggedInUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
         Optional<TravelBooking> optionalBooking = bookingRepository.findByBookingId(id);
         if(optionalBooking.isPresent()) {
             TravelBooking travelBookingToCancel = optionalBooking.get();
@@ -138,7 +144,7 @@ public class TravelBookingServiceImpl implements TravelBookingService {
                 travelBookingToCancel.setCancelled(true);
                 travelBookingRepository.save(travelBookingToCancel);
 
-                LOGGER.info("Booking with id {} cancelled", id);
+                LOGGER.info("Booking with id {} cancelled by user {}", id, loggedInUsername);
                 TravelBookingConfirmationDTO cancellationConfirmationDTO = getBookingConfirmation(travelBookingToCancel.getBookingId(),"Travel booking with id: " + travelBookingToCancel.getBookingId() + " has been successfully cancelled.");
                 cancellationConfirmationDTO.setCancelled(true);
                 return ResponseEntity.ok(cancellationConfirmationDTO);
@@ -150,5 +156,53 @@ public class TravelBookingServiceImpl implements TravelBookingService {
             throw new ResourceNotFoundException("Booking","ID",id);
         }
 
+    }
+
+    public ResponseEntity<List<TravelBookingConfirmationDTO>> okTravelBookingList(List<TravelBooking> travelBookings){
+        if (travelBookings == null || travelBookings.isEmpty()) {
+            // Return an empty list with a message DTO
+            TravelBookingConfirmationDTO emptyMessageDTO = new TravelBookingConfirmationDTO();
+            emptyMessageDTO.setMessage("No travel bookings found");
+            return ResponseEntity.ok(List.of(emptyMessageDTO));
+        }
+
+        List<TravelBookingConfirmationDTO> dtoList = travelBookings.stream()
+                        .map(this::convertToDTO)
+                        .toList();
+
+        return ResponseEntity.ok(dtoList);
+    }
+
+    @Override
+    public ResponseEntity<List<TravelBookingConfirmationDTO>> getAllUpcomingBookings() {
+        List<TravelBooking> bookings = bookingRepository.findByDepartureDateAfter(LocalDate.now());
+
+        if(bookings.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No active travel bookings found");
+        }
+
+        return okTravelBookingList(bookings);
+    }
+
+    @Override
+    public ResponseEntity<List<TravelBookingConfirmationDTO>> getAllPastBookings() {
+        List<TravelBooking> bookings = bookingRepository.findByDepartureDateBefore(LocalDate.now());
+
+        if(bookings.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No active travel bookings found");
+        }
+
+        return okTravelBookingList(bookings);
+    }
+
+    @Override
+    public ResponseEntity<List<TravelBookingConfirmationDTO>> getCancelledTravelBookings() {
+        List<TravelBooking> bookings = bookingRepository.findByCancelledTrue();
+
+        if(bookings.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No active travel bookings found");
+        }
+
+        return okTravelBookingList(bookings);
     }
 }

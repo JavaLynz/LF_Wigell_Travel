@@ -18,17 +18,14 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private LoggingFilter loggingFilter;
 
-    @Autowired
-    public SecurityConfig(LoggingFilter loggingFilter) {
-        this.loggingFilter = loggingFilter;
+
+    public SecurityConfig() {
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .addFilterAfter(loggingFilter, BasicAuthenticationFilter.class)
                 .httpBasic(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().authenticated()
@@ -66,11 +63,4 @@ public class SecurityConfig {
         return new InMemoryUserDetailsManager(lynseyfox, niklaseinarsson, christofferfrisk, benjaminportsmouth);
     }
 
-    public LoggingFilter getLoggingFilter() {
-        return loggingFilter;
-    }
-
-    public void setLoggingFilter(LoggingFilter loggingFilter) {
-        this.loggingFilter = loggingFilter;
-    }
 }

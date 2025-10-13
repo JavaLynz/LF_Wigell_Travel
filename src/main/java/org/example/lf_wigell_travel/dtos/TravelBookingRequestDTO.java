@@ -3,11 +3,13 @@ package org.example.lf_wigell_travel.dtos;
 import java.time.LocalDate;
 
 public class TravelBookingRequestDTO {
+    private Long bookingId;
     private Long tripId;
     private LocalDate departureDate;
     private Long numberOfWeeks;
 
-    public TravelBookingRequestDTO(Long tripId, LocalDate departureDate, Long numberOfWeeks) {
+    public TravelBookingRequestDTO(Long bookingId, Long tripId, LocalDate departureDate, Long numberOfWeeks) {
+        this.bookingId = bookingId;
         this.tripId = tripId;
         this.departureDate = departureDate;
         this.numberOfWeeks = numberOfWeeks;
@@ -40,10 +42,19 @@ public class TravelBookingRequestDTO {
         this.numberOfWeeks = numberOfWeeks;
     }
 
+    public Long getBookingId() {
+        return bookingId;
+    }
+
+    public void setBookingId(Long bookingId) {
+        this.bookingId = bookingId;
+    }
+
     @Override
     public String toString() {
-        return "BookingRequest{" +
-                "tripId=" + tripId +
+        return "TravelBookingRequestDTO{" +
+                "bookingId=" + bookingId +
+                ", tripId=" + tripId +
                 ", departureDate=" + departureDate +
                 ", numberOfWeeks=" + numberOfWeeks +
                 '}';

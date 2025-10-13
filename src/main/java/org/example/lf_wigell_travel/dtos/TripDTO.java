@@ -1,7 +1,10 @@
 package org.example.lf_wigell_travel.dtos;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.math.BigDecimal;
 
+@JsonInclude(JsonInclude.Include.ALWAYS)
 public class TripDTO {
     private Long tripId;
     private BigDecimal tripPricePerWeekSEK;

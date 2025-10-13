@@ -13,4 +13,10 @@ public interface TravelBookingService {
     ResponseEntity<List<TravelBookingConfirmationDTO>> getAllTravelBookings(String username);
 
     ResponseEntity<TravelBookingConfirmationDTO> cancelTravelBooking(Long id);
+
+    ResponseEntity<List<TravelBookingConfirmationDTO>> getCancelledTravelBookings();
+
+    ResponseEntity<List<TravelBookingConfirmationDTO>> getAllPastBookings();
+
+    ResponseEntity<List<TravelBookingConfirmationDTO>> getAllUpcomingBookings();
 }

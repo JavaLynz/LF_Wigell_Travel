@@ -25,9 +25,15 @@ public class TravelCustomerController {
         return ResponseEntity.ok(travelBookingServiceImpl.newTravelBooking(request));
     }
 
-    @PutMapping("/canceltrip/{id}")
-    public ResponseEntity<TravelBookingConfirmationDTO> cancelTrip(@PathVariable Long id){
-        return travelBookingServiceImpl.cancelTravelBooking(id);
+    @PutMapping("/canceltrip")
+    public ResponseEntity<TravelBookingConfirmationDTO> cancelTrip(@RequestBody TravelBookingRequestDTO tripToCancel){
+        if (tripToCancel.getBookingId() == null) {
+            TravelBookingConfirmationDTO dto = new TravelBookingConfirmationDTO();
+            dto.setMessage("Booking ID is required");
+            return ResponseEntity.badRequest().body(dto);
+        }
+
+        return travelBookingServiceImpl.cancelTravelBooking(tripToCancel.getBookingId());
     }
 
     @GetMapping("mybookings")
