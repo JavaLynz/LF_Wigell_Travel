@@ -39,7 +39,7 @@ public class TravelBookingServiceImpl implements TravelBookingService {
 
 
     @Override
-    public ResponseEntity<TravelBookingConfirmationDTO> newTravelBooking(TravelBookingRequestDTO request) {
+    public TravelBookingConfirmationDTO newTravelBooking(TravelBookingRequestDTO request) {
 
         String customerUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
@@ -64,7 +64,7 @@ public class TravelBookingServiceImpl implements TravelBookingService {
         TravelBooking savedBooking = bookingRepository.save(booking);
 
         LOGGER.info("User {} booked {} weeks at {}.", customerUsername, request.getNumberOfWeeks(), trip.getDestinationCity());
-        return ResponseEntity.status(HttpStatus.CREATED).body(getBookingConfirmation(savedBooking.getBookingId(),"Booking successfully created."));
+        return getBookingConfirmation(savedBooking.getBookingId(),"Booking successfully created.");
 
     }
 
@@ -118,7 +118,7 @@ public class TravelBookingServiceImpl implements TravelBookingService {
     }
 
     @Override
-    public ResponseEntity<List<TravelBookingConfirmationDTO>> getAllTravelBookings(String username) {
+    public List<TravelBookingConfirmationDTO> getAllTravelBookings() {
         String loggedInUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
         List<TravelBooking> bookings = bookingRepository.findByTravelCustomerAndCancelledFalse(loggedInUsername);
@@ -127,11 +127,11 @@ public class TravelBookingServiceImpl implements TravelBookingService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No active travel bookings found");
         }
 
-        return okTravelBookingList(bookings);
+        return travelBookingList(bookings);
     }
 
     @Override
-    public ResponseEntity<TravelBookingConfirmationDTO> cancelTravelBooking(Long id) {
+    public TravelBookingConfirmationDTO cancelTravelBooking(Long id) {
         String loggedInUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
         Optional<TravelBooking> optionalBooking = bookingRepository.findByBookingId(id);
@@ -147,7 +147,7 @@ public class TravelBookingServiceImpl implements TravelBookingService {
                 LOGGER.info("Booking with id {} cancelled by user {}", id, loggedInUsername);
                 TravelBookingConfirmationDTO cancellationConfirmationDTO = getBookingConfirmation(travelBookingToCancel.getBookingId(),"Travel booking with id: " + travelBookingToCancel.getBookingId() + " has been successfully cancelled.");
                 cancellationConfirmationDTO.setCancelled(true);
-                return ResponseEntity.ok(cancellationConfirmationDTO);
+                return cancellationConfirmationDTO;
             } else {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Cancellation not allowed less than 7 days before departure date");
             }
@@ -158,51 +158,49 @@ public class TravelBookingServiceImpl implements TravelBookingService {
 
     }
 
-    public ResponseEntity<List<TravelBookingConfirmationDTO>> okTravelBookingList(List<TravelBooking> travelBookings){
+    public List<TravelBookingConfirmationDTO> travelBookingList(List<TravelBooking> travelBookings){
         if (travelBookings == null || travelBookings.isEmpty()) {
             // Return an empty list with a message DTO
             TravelBookingConfirmationDTO emptyMessageDTO = new TravelBookingConfirmationDTO();
             emptyMessageDTO.setMessage("No travel bookings found");
-            return ResponseEntity.ok(List.of(emptyMessageDTO));
+            return List.of(emptyMessageDTO);
         }
 
-        List<TravelBookingConfirmationDTO> dtoList = travelBookings.stream()
+        return travelBookings.stream()
                         .map(this::convertToDTO)
                         .toList();
-
-        return ResponseEntity.ok(dtoList);
     }
 
     @Override
-    public ResponseEntity<List<TravelBookingConfirmationDTO>> getAllUpcomingBookings() {
+    public List<TravelBookingConfirmationDTO> getAllUpcomingBookings() {
         List<TravelBooking> bookings = bookingRepository.findByDepartureDateAfter(LocalDate.now());
 
         if(bookings.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No active travel bookings found");
         }
 
-        return okTravelBookingList(bookings);
+        return travelBookingList(bookings);
     }
 
     @Override
-    public ResponseEntity<List<TravelBookingConfirmationDTO>> getAllPastBookings() {
+    public List<TravelBookingConfirmationDTO> getAllPastBookings() {
         List<TravelBooking> bookings = bookingRepository.findByDepartureDateBefore(LocalDate.now());
 
         if(bookings.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No active travel bookings found");
         }
 
-        return okTravelBookingList(bookings);
+        return travelBookingList(bookings);
     }
 
     @Override
-    public ResponseEntity<List<TravelBookingConfirmationDTO>> getCancelledTravelBookings() {
+    public List<TravelBookingConfirmationDTO> getCancelledTravelBookings() {
         List<TravelBooking> bookings = bookingRepository.findByCancelledTrue();
 
         if(bookings.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"No active travel bookings found");
         }
 
-        return okTravelBookingList(bookings);
+        return travelBookingList(bookings);
     }
 }

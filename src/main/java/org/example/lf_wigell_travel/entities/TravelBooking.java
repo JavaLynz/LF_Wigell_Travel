@@ -37,10 +37,11 @@ public class TravelBooking {
 
     public TravelBooking() {}
 
-    public TravelBooking(String travelCustomer, LocalDate departureDate, Long durationWeeks) {
+    public TravelBooking(String travelCustomer, Trip trip,LocalDate departureDate, Long durationWeeks) {
         this.travelCustomer = travelCustomer;
         this.departureDate = departureDate;
         this.durationWeeks = durationWeeks;
+        this.trip = trip;
     }
 
     public Long getBookingId() {

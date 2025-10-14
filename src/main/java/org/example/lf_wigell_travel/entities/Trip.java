@@ -25,8 +25,7 @@ public class Trip {
 
     public Trip() {}
 
-    public Trip(Long tripId, BigDecimal tripPricePerWeekSEK, String hotelName, String destinationCity, String destinationCountry) {
-        this.tripId = tripId;
+    public Trip(BigDecimal tripPricePerWeekSEK, String hotelName, String destinationCity, String destinationCountry) {
         this.tripPricePerWeekSEK = tripPricePerWeekSEK;
         this.hotelName = hotelName;
         this.destinationCity = destinationCity;

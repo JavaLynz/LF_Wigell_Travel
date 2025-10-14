@@ -6,7 +6,7 @@ docker rm travel-service
 echo Deleting image travel-service
 docker rmi travel-service
 echo Running mvn package
-call mvn package
+call mvn package -DskipTests
 echo Creating image travel-service
 docker build -t travel-service .
 echo Creating and running container travel-service

@@ -27,6 +27,10 @@ public class TripserviceImpl implements TripService{
 
     @Override
     public String deleteTrip(Long id) {
+        if (id == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trip ID is required for deletion");
+        }
+
         Optional<Trip> optionalTrip = tripRepository.findById(id);
 
         Trip tripToDelete = optionalTrip.orElseThrow(() ->
@@ -35,8 +39,7 @@ public class TripserviceImpl implements TripService{
 
             tripRepository.delete(tripToDelete);
             LOGGER.info("Trip with id {} deleted", id);
-            return "Booking with id " + id + " has been deleted successfully"
-                    ;
+            return "Booking with id " + id + " has been deleted successfully";
     }
 
     @Override
@@ -70,7 +73,7 @@ public class TripserviceImpl implements TripService{
             Trip duplicate = existingTrip.get();
             LOGGER.info("Duplicate trip found: id={}", duplicate.getTripId());
 
-            TripDTO existingTripDTO = convertToTripDTO(duplicate.getTripId(), "Trip already exists in the database");
+            TripDTO existingTripDTO = convertToTripDTO(duplicate, "Trip already exists in the database");
 
 
             throw new ResponseStatusException(HttpStatus.CONFLICT, existingTripDTO.toString());
@@ -84,30 +87,29 @@ public class TripserviceImpl implements TripService{
 
         tripRepository.save(newTrip);
 
-        LOGGER.info("New trip added");
+        LOGGER.info("New trip added by Admin");
 
-        return convertToTripDTO(newTrip.getTripId(), "New trip successfully created.");
+        return convertToTripDTO(newTrip, "New trip successfully created.");
     }
 
-    public TripDTO convertToTripDTO(Long tripId, String message) {
+    public TripDTO convertToTripDTO(Trip trip, String message) {
+        if (trip == null) {
+            throw new ResourceNotFoundException("Trip", "Trip object", null);
+        }
 
-        Trip trip = tripRepository.findById(tripId).orElseThrow(() ->
-                new ResourceNotFoundException("Trip", "id", tripId)
-        );
+        TripDTO dto = new TripDTO();
+        dto.setDestinationCity(trip.getDestinationCity());
+        dto.setDestinationCountry(trip.getDestinationCountry());
+        dto.setHotelName(trip.getHotelName());
+        dto.setTripPricePerWeekSEK(trip.getTripPricePerWeekSEK());
+        dto.setTripId(trip.getTripId());
+        dto.setMessage(message);
+        return dto;
 
-            TripDTO dto = new TripDTO();
-            dto.setDestinationCity(trip.getDestinationCity());
-            dto.setDestinationCountry(trip.getDestinationCountry());
-            dto.setHotelName(trip.getHotelName());
-            dto.setTripPricePerWeekSEK(trip.getTripPricePerWeekSEK());
-            dto.setTripId(tripId);
-            dto.setMessage(message);
-
-            return dto;
         }
 
     public TripDTO convertToTripDTO(Trip trip) {
-        return convertToTripDTO(trip.getTripId(), null);
+        return convertToTripDTO(trip, null);
     }
 
     @Override
@@ -152,7 +154,7 @@ public class TripserviceImpl implements TripService{
         Trip updatedTrip = tripRepository.save(tripToUpdate);
 
         LOGGER.info("Trip with id {} updated", trip.getTripId());
-        return convertToTripDTO(updatedTrip.getTripId(), "Trip with id: " +  updatedTrip.getTripId() + " successfully updated");
+        return convertToTripDTO(updatedTrip, "Trip with id: " +  updatedTrip.getTripId() + " successfully updated");
     }
 
 }

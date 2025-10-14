@@ -2,21 +2,19 @@ package org.example.lf_wigell_travel.services;
 
 import org.example.lf_wigell_travel.dtos.TravelBookingConfirmationDTO;
 import org.example.lf_wigell_travel.dtos.TravelBookingRequestDTO;
-import org.example.lf_wigell_travel.entities.TravelBooking;
-import org.springframework.http.ResponseEntity;
 import java.util.List;
 
 public interface TravelBookingService {
 
-    ResponseEntity<TravelBookingConfirmationDTO> newTravelBooking(TravelBookingRequestDTO request);
+    TravelBookingConfirmationDTO newTravelBooking(TravelBookingRequestDTO request);
 
-    ResponseEntity<List<TravelBookingConfirmationDTO>> getAllTravelBookings(String username);
+    List<TravelBookingConfirmationDTO> getAllTravelBookings();
 
-    ResponseEntity<TravelBookingConfirmationDTO> cancelTravelBooking(Long id);
+    TravelBookingConfirmationDTO cancelTravelBooking(Long id);
 
-    ResponseEntity<List<TravelBookingConfirmationDTO>> getCancelledTravelBookings();
+    List<TravelBookingConfirmationDTO> getCancelledTravelBookings();
 
-    ResponseEntity<List<TravelBookingConfirmationDTO>> getAllPastBookings();
+    List<TravelBookingConfirmationDTO> getAllPastBookings();
 
-    ResponseEntity<List<TravelBookingConfirmationDTO>> getAllUpcomingBookings();
+    List<TravelBookingConfirmationDTO> getAllUpcomingBookings();
 }

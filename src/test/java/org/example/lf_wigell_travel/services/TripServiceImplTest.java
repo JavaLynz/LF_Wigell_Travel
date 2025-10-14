@@ -32,7 +32,8 @@ public class TripServiceImplTest {
     public void setUp() {
         tripRepository = mock(TripRepository.class);
         tripService =new TripserviceImpl(tripRepository);
-        trip = new Trip(TRIP_ID, PRICE, HOTEL, CITY, COUNTRY);
+        trip = new Trip(PRICE, HOTEL, CITY, COUNTRY);
+        trip.setTripId(TRIP_ID);
 
         tripDTO = new TripDTO();
         tripDTO.setTripId(TRIP_ID);
@@ -51,7 +52,12 @@ public class TripServiceImplTest {
 
 @Test
 void addTripShouldSucceedWhenValid(){
-    when(tripRepository.save(trip)).thenReturn(trip);
+    when(tripRepository.save(any(Trip.class))).thenAnswer(inv -> {
+        Trip t = inv.getArgument(0);
+        t.setTripId(TRIP_ID);
+        return t;
+    });
+    when(tripRepository.findById(trip.getTripId())).thenReturn(Optional.of(trip));
 
     TripDTO confirmation = tripService.addTrip(tripService.convertToTripDTO(trip));
 
@@ -62,7 +68,7 @@ void addTripShouldSucceedWhenValid(){
     assertThat(confirmation.getHotelName()).isEqualTo(trip.getHotelName());
     assertThat(confirmation.getTripPricePerWeekSEK()).isEqualTo(trip.getTripPricePerWeekSEK());
 
-    verify(tripRepository).save(trip);
+    verify(tripRepository, times(1)).save(any(Trip.class));
 
 }
 
@@ -70,9 +76,13 @@ void addTripShouldSucceedWhenValid(){
     void addTripShouldThrowExceptionWhenMissingDetails(){
     trip.setTripPricePerWeekSEK(BigDecimal.ZERO);
 
-    when(tripRepository.save(trip)).thenReturn(trip);
+    when(tripRepository.save(any(Trip.class))).thenAnswer(inv -> {
+        Trip t = inv.getArgument(0);
+        t.setTripId(TRIP_ID);
+        return t;
+    });
 
-    assertThatThrownBy(()->tripService.addTrip(tripService.convertToTripDTO(trip)))
+    assertThatThrownBy(()->tripService.addTrip(invalidTripDTO))
             .isInstanceOf(ResponseStatusException.class)
             .hasMessageContaining("Missing required details");
 
@@ -80,9 +90,8 @@ void addTripShouldSucceedWhenValid(){
 
 @Test
 void getTripDTOShouldSucceedWhenTripExists(){
-    when(tripRepository.findById(7L)).thenReturn(Optional.of(trip));
 
-    TripDTO dto = tripService.convertToTripDTO(7L, "DTO successfully created");
+    TripDTO dto = tripService.convertToTripDTO(trip);
 
     assertThat(dto).isNotNull();
     assertThat(dto.getTripId()).isEqualTo(trip.getTripId());
@@ -90,28 +99,27 @@ void getTripDTOShouldSucceedWhenTripExists(){
     assertThat(dto.getDestinationCountry()).isEqualTo(trip.getDestinationCountry());
     assertThat(dto.getHotelName()).isEqualTo(trip.getHotelName());
     assertThat(dto.getTripPricePerWeekSEK()).isEqualTo(trip.getTripPricePerWeekSEK());
+    assertThat(dto.getMessage()).isNull();
 
-    verify(tripRepository).findById(7L);
 }
 
 @Test
 void getTripDTOShouldThrowExceptionWhenTripNotFound(){
-    when(tripRepository.findById(7L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(()->tripService.convertToTripDTO(7L, "Trip not found"))
+    assertThatThrownBy(()->tripService.convertToTripDTO(null, "Trip not found"))
     .isInstanceOf(ResourceNotFoundException.class)
-            .hasMessageContaining("Trip not found");
+            .hasMessageContaining("Trip object");
 }
 
 @Test
     void getAllTripsShouldReturnAListOf6TripDTOs(){
         List<Trip> trips = List.of(
-            new Trip(1L, BigDecimal.valueOf(1000), "Hotel 1", "City 1", "Country 1"),
-            new Trip(2L, BigDecimal.valueOf(2000), "Hotel 2", "City 2", "Country 2"),
-            new Trip(3L, BigDecimal.valueOf(3000), "Hotel 3", "City 3", "Country 3"),
-            new Trip(4L, BigDecimal.valueOf(4000), "Hotel 4", "City 4", "Country 4"),
-            new Trip(5L, BigDecimal.valueOf(5000), "Hotel 5", "City 5", "Country 5"),
-            new Trip(6L, BigDecimal.valueOf(6000), "Hotel 6", "City 6", "Country 6")
+            new Trip(BigDecimal.valueOf(1000), "Hotel 1", "City 1", "Country 1"),
+            new Trip(BigDecimal.valueOf(2000), "Hotel 2", "City 2", "Country 2"),
+            new Trip(BigDecimal.valueOf(3000), "Hotel 3", "City 3", "Country 3"),
+            new Trip(BigDecimal.valueOf(4000), "Hotel 4", "City 4", "Country 4"),
+            new Trip(BigDecimal.valueOf(5000), "Hotel 5", "City 5", "Country 5"),
+            new Trip(BigDecimal.valueOf(6000), "Hotel 6", "City 6", "Country 6")
     );
         when(tripRepository.findAll()).thenReturn(trips);
 
@@ -157,7 +165,7 @@ void getTripDTOShouldThrowExceptionWhenTripNotFound(){
 
         assertThatThrownBy(()->tripService.updateTrip(updatedTripDTO))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Trip not found");
+                .hasMessageContaining("Trip with id '8' not found");
 
         verify(tripRepository, times(1)).findById(8L);
         verify(tripRepository, never()).save(any(Trip.class));
@@ -178,6 +186,34 @@ void getTripDTOShouldThrowExceptionWhenTripNotFound(){
 
 @Test
     void deleteTripShouldSucceedWhenTripExists(){
+    when(tripRepository.findById(trip.getTripId())).thenReturn(Optional.of(trip));
+
+    String result = tripService.deleteTrip(trip.getTripId());
+
+    assertThat(result).isEqualTo("Booking with id 7 has been deleted successfully");
+
+    verify(tripRepository, times(1)).findById(trip.getTripId());
+    verify(tripRepository,times(1)).delete(trip);
+
+}
+
+@Test
+    void deleteTripShouldThrowExceptionWhenTripNotFound(){
+        when(tripRepository.findById(trip.getTripId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(()->tripService.deleteTrip(trip.getTripId()))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining("Trip with id '7' not found");
+
+        verify(tripRepository, times(1)).findById(trip.getTripId());
+        verify(tripRepository,never()).delete(any());
+}
+
+@Test
+    void deleteTripShouldThrowExceptionWhenIdIsMissing(){
+        assertThatThrownBy(()->tripService.deleteTrip(null))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Trip ID is required for deletion");
 
 }
 
